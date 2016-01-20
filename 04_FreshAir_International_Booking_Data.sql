@@ -1,6 +1,6 @@
 -- ========================================= KEF-OSL  01.05.2014 ===========================================
 -- Buisness Class
-insert into Bookings(timeOfBooking,paymentType,cardIssuedBy,cardholdersName,flightCode,classID)values('2014-04-23',1,'Mastercard','Theodor Fransson',1,1);						
+insert into Bookings(timeOfBooking,paymentType,cardIssuedBy,cardholdersName,flightCode,classID)values('2014-04-23',1,'Mastercard','Theodor Fransson',1,1);
 insert into Bookings(timeOfBooking,paymentType,cardIssuedBy,cardholdersName,flightCode,classID)values('2014-04-30',1,'Diners Club','Kjetil Amundsen',1,1);
 insert into Bookings(timeOfBooking,paymentType,cardIssuedBy,cardholdersName,flightCode,classID)values('2014-04-27',1,'American Express','Andreas Rasmussen',1,1);
 insert into Bookings(timeOfBooking,paymentType,cardIssuedBy,cardholdersName,flightCode,classID)values('2014-04-29',1,'VISA','Hjördís Orradóttir',1,1); 
