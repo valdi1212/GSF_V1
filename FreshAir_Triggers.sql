@@ -49,41 +49,19 @@ FOR EACH ROW
       JOIN bookings ON flights.flightCode = bookings.flightCode
     WHERE bookings.bookingNumber = new.bookingNumber;
 
-    IF (date(new.timeOfBooking) > flight_date)
+    IF (cast(new.timeOfBooking AS DATE) > cast(flight_date AS DATE))
     THEN
-      SET msg = concat('Cannot book flight after it has left ', cast(new.timeOfBooking AS DATE));
+      SET msg = concat('Cannot book flight after it has left.');
       SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT = msg;
     END IF;
 
     -- stoppar bókun ef það eru engin tóm sæti
-    DECLARE max_seats SMALLINT(6);
-    DECLARE booked_seats INT;
-    DECLARE free_seats INT;
-
-    -- setur gögn í breytuna max_seats
-    SELECT aircrafts.maxNumberOfPassangers
-    INTO max_seats
-    FROM bookings
-      JOIN flights ON bookings.flightCode = flights.flightCode
-      JOIN aircrafts ON flights.aircraftID = aircrafts.aircraftID
-    WHERE bookings.bookingNumber = new.bookingNumber;
-
-    -- setur gögn í breytuna booked_seats
-    SELECT count(bookingNumber)
-    INTO booked_seats
-    FROM bookings
-      JOIN flights ON bookings.flightCode = flights.flightCode
-      JOIN aircrafts ON flights.aircraftID = aircrafts.aircraftID
-    WHERE bookings.bookingNumber = new.bookingNumber;
-
-    -- setur gögn í breytuna free_seats
-    SELECT max_seats - booked_seats
-    INTO free_seats;
-
-    IF (free_seats <= 0)
+    IF (count_free_seats(new.flightCode) <= 0)
     THEN
       SET msg = concat('Cannot book flight. Seats full.');
+      SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = msg;
     END IF;
   END $$
 DELIMITER ;
