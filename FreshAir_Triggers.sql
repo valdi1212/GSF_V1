@@ -1,5 +1,19 @@
 USE `1212962259_freshair_international`;
 
+-- Töflur
+
+DELIMITER $$
+DROP TABLE IF EXISTS FreshAirLogs $$
+CREATE TABLE FreshAirLogs
+(
+  logID        INT     NOT NULL AUTO_INCREMENT,
+  logText      VARCHAR(125),
+  logDate      DATE             DEFAULT NULL,
+  flightNumber CHAR(5) NOT NULL,
+  CONSTRAINT freshairlogPK PRIMARY KEY (logID)
+);
+
+DELIMITER ;
 -- Triggerar
 
 DELIMITER $$
@@ -24,32 +38,79 @@ CREATE TRIGGER before_booking_insert
 BEFORE INSERT ON bookings
 FOR EACH ROW
   BEGIN
+    -- stoppar bókun ef flugið er nú þegar farið
     DECLARE msg VARCHAR(255);
     DECLARE flight_date DATE;
-    DECLARE flight_time TIME;
+
+    -- setur gögn í breytuna flight_date
     SELECT flights.flightDate
     INTO flight_date
     FROM flights
       JOIN bookings ON flights.flightCode = bookings.flightCode
     WHERE bookings.bookingNumber = new.bookingNumber;
 
-    SELECT flights.flightTime
-    INTO flight_time
-    FROM flights
-      JOIN bookings ON flights.flightCode = bookings.flightCode
-    WHERE bookings.bookingNumber = new.bookingNumber;
-
-    IF (cast(new.timeOfBooking AS DATE) > flight_date OR
-        (cast(new.timeOfBooking AS DATE) = flight_date AND cast(new.timeOfBooking AS TIME) > flight_time))
+    IF (date(new.timeOfBooking) > flight_date)
     THEN
-      SET msg = concat('Cannot book flight after it has left ', cast(new.timeOfBooking AS CHAR));
+      SET msg = concat('Cannot book flight after it has left ', cast(new.timeOfBooking AS DATE));
       SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT = msg;
+    END IF;
+
+    -- stoppar bókun ef það eru engin tóm sæti
+    DECLARE max_seats SMALLINT(6);
+    DECLARE booked_seats INT;
+    DECLARE free_seats INT;
+
+    -- setur gögn í breytuna max_seats
+    SELECT aircrafts.maxNumberOfPassangers
+    INTO max_seats
+    FROM bookings
+      JOIN flights ON bookings.flightCode = flights.flightCode
+      JOIN aircrafts ON flights.aircraftID = aircrafts.aircraftID
+    WHERE bookings.bookingNumber = new.bookingNumber;
+
+    -- setur gögn í breytuna booked_seats
+    SELECT count(bookingNumber)
+    INTO booked_seats
+    FROM bookings
+      JOIN flights ON bookings.flightCode = flights.flightCode
+      JOIN aircrafts ON flights.aircraftID = aircrafts.aircraftID
+    WHERE bookings.bookingNumber = new.bookingNumber;
+
+    -- setur gögn í breytuna free_seats
+    SELECT max_seats - booked_seats
+    INTO free_seats;
+
+    IF (free_seats <= 0)
+    THEN
+      SET msg = concat('Cannot book flight. Seats full.');
     END IF;
   END $$
 DELIMITER ;
 
--- Functions(vonandi)
+DELIMITER $$
+DROP TRIGGER IF EXISTS before_flightschedule_insert $$
+CREATE TRIGGER before_flightschedule_insert
+BEFORE INSERT ON flightschedules
+FOR EACH ROW
+  BEGIN
+    INSERT INTO FreshAirLogs (logText, logDate, flightNumber)
+    VALUES ('Ný flugáætlun skráð', curdate(), new.flightNumber);
+  END $$
+DELIMITER ;
+
+DELIMITER $$
+DROP TRIGGER IF EXISTS before_flightschedule_update $$
+CREATE TRIGGER before_flightschedule_update
+BEFORE UPDATE ON flightschedules
+FOR EACH ROW
+  BEGIN
+    INSERT INTO FreshAirLogs (logText, logDate, flightNumber)
+    VALUES ('Flugáætlun uppfærð', curdate(), new.flightNumber);
+  END $$
+DELIMITER ;
+
+-- Functions
 
 DELIMITER $$
 DROP FUNCTION IF EXISTS count_seats $$
@@ -123,6 +184,6 @@ CREATE FUNCTION get_flight_info(flight_code INT(11))
       JOIN flights ON aircrafts.aircraftID = flights.aircraftID
     WHERE flight_code = flights.flightCode;
 
-    RETURN concat(aircraft_id,' | ', aircraft_type);
+    RETURN concat(aircraft_id, ' | ', aircraft_type);
   END $$
 DELIMITER ;
