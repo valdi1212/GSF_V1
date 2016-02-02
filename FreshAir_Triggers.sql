@@ -49,6 +49,7 @@ FOR EACH ROW
       JOIN bookings ON flights.flightCode = bookings.flightCode
     WHERE bookings.bookingNumber = new.bookingNumber;
 
+	-- VIRKAR EKKI SIGGI!!!
     IF (cast(new.timeOfBooking AS DATE) > cast(flight_date AS DATE))
     THEN
       SET msg = concat('Cannot book flight after it has left.');
